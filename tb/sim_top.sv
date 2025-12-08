@@ -4,6 +4,10 @@ import uvm_pkg::*;
 `include "uvm_macros.svh"
 
 `include "base_test.sv"
+`include "uvm_callback_test.sv"
+
+
+
 
 module sim_top;
 	
