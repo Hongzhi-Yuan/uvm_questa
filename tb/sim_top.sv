@@ -5,6 +5,9 @@ import uvm_pkg::*;
 
 `include "base_test.sv"
 
+`include "uvm_container_test.sv"
+
+
 module sim_top;
 	
 	initial begin
