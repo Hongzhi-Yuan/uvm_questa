@@ -32,8 +32,8 @@ set CASE=%DEFAULT_CASE%
 set DEFAULT_SEED=1
 set SEED=%DEFAULT_SEED%
 
-REM External UVM-1.2 source (your installed UVM)
-set UVM_HOME=D:\EDA\uvm-1.2\src
+REM External UVM-1.2 source (Questa built-in)
+set UVM_HOME=%QUESTA_HOME%\verilog_src\uvm-1.2\src
 
 REM Use Questa built-in UVM DPI dll (base name, no .dll)
 set UVM_DPI_BASE=%QUESTA_HOME%\uvm-1.2\win64\uvm_dpi
