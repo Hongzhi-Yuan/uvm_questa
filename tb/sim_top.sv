@@ -5,6 +5,10 @@ import uvm_pkg::*;
 
 `include "base_test.sv"
 
+`include "uvm_packer_test.sv"
+
+
+
 module sim_top;
 	
 	initial begin
