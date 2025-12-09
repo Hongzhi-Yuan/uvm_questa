@@ -26,21 +26,27 @@ class uvm_container_test extends  uvm_test;
 	 */
 	virtual task main_phase(uvm_phase phase);
 		// TODO Auto-generated task stub
-//		this.uvm_pool_test("demo");	
-		this.uvm_pool_test("demo_push_back");
-		this.uvm_pool_test("demo_push_front");
-		this.uvm_pool_test("demo_insert");
-		this.uvm_pool_test("demo_delete");
-		this.uvm_pool_test("demo_pop_front");
-		this.uvm_pool_test("demo_pop_back");
-		this.uvm_pool_test("demo_cover2string");
-
+//		test_queue();
+		test_pool();
+		
 		super.main_phase(phase);
 		
 	endtask : main_phase
 	
 	
-	virtual function void uvm_pool_test(string cmd);
+	virtual  function void test_queue();
+		this.uvm_queue_test("demo");	
+		this.uvm_queue_test("demo_push_back");
+		this.uvm_queue_test("demo_push_front");
+		this.uvm_queue_test("demo_insert");
+		this.uvm_queue_test("demo_delete");
+		this.uvm_queue_test("demo_pop_front");
+		this.uvm_queue_test("demo_pop_back");
+		this.uvm_queue_test("demo_cover2string");
+	endfunction 
+
+
+	virtual function void uvm_queue_test(string cmd);
 		static uvm_queue#(int) static_int_queue;
 		static string queue2string;
 		static_int_queue = uvm_queue#(int)::get_global_queue();
@@ -153,8 +159,58 @@ class uvm_container_test extends  uvm_test;
 
 		
 	endfunction 
-
-
+	
+	
+	virtual function  void  test_pool();
+		this.uvm_pool_test("globol");
+		this.uvm_pool_test("demo");
+		this.uvm_pool_test("demo_add");
+	endfunction 
+	
+	
+	virtual function void uvm_pool_test(string cmd);
+		static uvm_pool#(string, int) static_pool;
+		string type_name;
+		static_pool = new("static_pool");
+		case (cmd) 
+			"globol" : begin 
+				static_pool = uvm_pool#(string, int)::get_global_pool();
+				type_name = static_pool.get_type_name();
+				$display("********************type_name  = %0s******************************",   type_name);
+			end 
+			
+			"demo" : begin 
+				void'($cast(static_pool, static_pool.create("static_pool")));
+				type_name = static_pool.get_name();
+				$display(type_name);
+			end 
+			
+			"demo_add":begin 
+				static_pool.add("A", 1);
+				static_pool.add("B", 2);
+				static_pool.add("C", 3);
+				static_pool.add("D", 4);
+				static_pool.add("E", 5);
+				
+				$display("%0d",static_pool.get("A"));
+				$display("%0d",static_pool.get("B"));
+				$display("%0d",static_pool.get("C"));
+				$display("%0d",static_pool.get("D"));
+				$display("%0d",static_pool.get("E"));
+				
+				
+			end 
+			
+			"demo_del":begin
+				
+			end 
+			
+				
+			
+			default:
+				return ;
+		endcase 
+	endfunction 
 endclass 
 
 
