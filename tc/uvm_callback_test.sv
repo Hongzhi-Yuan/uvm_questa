@@ -2,86 +2,122 @@
 `define UVM_CALLBACK_TEST_SV
 
 
-class callback_demo extends uvm_callback;
-	`uvm_object_utils(callback_demo)
-	function new(string name = "callback_demo");
+class demo_object extends uvm_object;
+	/**
+	
+	 * @see uvm_pkg::uvm_object.new
+	
+	 * @param name - 
+	
+	 * @return 
+	
+	 */
+	function new(string name = "demo_object");
+		// TODO Auto-generated constructor stub
+	
+		
+	
 		super.new(name);
-	endfunction 
 	
-	virtual function void pre_task();
-		$display("*****************************pre task*****************************");
-	endfunction 
-
-	virtual function void post_task();
-		$display("*****************************post task****************************");
-	endfunction 
-
+		
+	
+		
+	endfunction : new
 endclass 
 
 
 
-class component_demo extends uvm_component;
-	`uvm_register_cb(component_demo, callback_demo)
-	
-	`uvm_component_utils(component_demo)
-	function  new(string name = "component_demo", uvm_component parent = null );
-		super.new(name, parent);
-	endfunction 
-	
+class demo_callback extends uvm_callback;
 	/**
 	
-	 * @see uvm_pkg::uvm_component.connect_phase
+	 * @see uvm_pkg::uvm_callback.new
 	
-	 * @param phase - 
+	 * @param name - 
 	
-	 * 
+	 * @return 
 	
 	 */
-	virtual function void connect_phase(uvm_phase phase);
-		// TODO Auto-generated function stub
+	function new(string name = "demo_callback");
+		// TODO Auto-generated constructor stub
 	
-		super.connect_phase(phase);
+		
 	
-		`uvm_do_callbacks(component_demo, callback_demo, pre_task)
+		super.new(name);
 	
-		`uvm_do_callbacks(component_demo, callback_demo, post_task)
-	endfunction : connect_phase
+		
 	
+		
+	endfunction : new
+	
+	virtual function void pre_do;
+		$display("pre_do called");
+	endfunction 
 endclass 
 
 
-
-
-
-class uvm_callback_test extends  uvm_test;
-	callback_demo cb_demo__c0;
-	component_demo comp_demo_t0;
+class uvm_callback_test extends uvm_test;
+	
 	`uvm_component_utils(uvm_callback_test)
-	function new(string name = "uvm_callback_test", uvm_component parent = null );
-		super.new(name, parent);
-	endfunction 
+	
 	
 	/**
 	
-	 * @see uvm_pkg::uvm_component.build_phase
+	 * @see uvm_pkg::uvm_test.new
+	
+	 * @param name - 
+	
+	
+	
+	 * @param parent - 
+	
+	 * @return 
+	
+	 */
+	function new(string name = "uvm_callback_test", uvm_component parent = null );
+		// TODO Auto-generated constructor stub
+	
+		
+	
+		super.new(name, parent);
+	
+		
+	
+		
+	endfunction : new
+	
+	/**
+	
+	 * @see uvm_pkg::uvm_component.main_phase
 	
 	 * @param phase - 
 	
 	 * 
 	
 	 */
-	virtual function void build_phase(uvm_phase phase);
-		// TODO Auto-generated function stub
-	
-		super.build_phase(phase);
+	virtual task main_phase(uvm_phase phase);
+		// TODO Auto-generated task stub
+		demo_callback cb = new("cb");
+		demo_object t = new("t");
+		int intr;
 		
-		cb_demo__c0 = callback_demo::type_id::create("cb_demo__c0");
-		comp_demo_t0 = component_demo::type_id::create("comp_demo_t0", this);
-	
-		uvm_callbacks#(component_demo, callback_demo)::add(comp_demo_t0, cb_demo__c0);
+		demo_callback user_cb;
+		
+		
+		void'(uvm_callbacks#(demo_object, demo_callback)::m_register_pair("demo_object", "demo_callback"));
+		
+		uvm_callbacks#(demo_object, demo_callback)::add(t, cb, UVM_APPEND);
+			
+		user_cb= uvm_callbacks#(demo_object, demo_callback)::get_first(intr, t);
+		
+		user_cb.pre_do();
+		
+		super.main_phase(phase);
 	
 		
-	endfunction : build_phase
+	
+		
+	endtask : main_phase
+	
 endclass 
 
 
