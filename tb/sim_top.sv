@@ -5,8 +5,8 @@ import uvm_pkg::*;
 
 `include "base_test.sv"
 
-`include "uvm_phase_test.sv"
-
+`include "uvm_phase_test__v0.sv"
+`include "uvm_phase_test__v1.sv"
 
 module sim_top;
 	
