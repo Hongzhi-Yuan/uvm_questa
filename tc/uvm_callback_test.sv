@@ -98,6 +98,7 @@ class uvm_callback_test extends uvm_test;
 		// TODO Auto-generated task stub
 		demo_callback cb = new("cb");
 		demo_object t = new("t");
+		uvm_callback_iter#(demo_object, demo_callback) iter = new(t);
 		int intr;
 		
 		demo_callback user_cb;
@@ -107,7 +108,10 @@ class uvm_callback_test extends uvm_test;
 		
 		uvm_callbacks#(demo_object, demo_callback)::add(t, cb, UVM_APPEND);
 			
-		user_cb= uvm_callbacks#(demo_object, demo_callback)::get_first(intr, t);
+//		user_cb = uvm_callbacks#(demo_object, demo_callback)::get_first(intr, t);
+		
+		
+		user_cb =  iter.first();
 		
 		user_cb.pre_do();
 		
