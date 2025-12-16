@@ -7,13 +7,24 @@ import uvm_pkg::*;
 
 `include "uvm_phase_test__v0.sv"
 `include "uvm_phase_test__v1.sv"
+`include "uvm_phase_test__v2.sv"
 
 module sim_top;
 	
 	initial begin
-		run_test();
+//		run_test();
 	end
+
+
+	initial begin 
+//		info();
+
+	end 
 	
+	initial begin
+		phase_test_02();
+	end
+
 	
 	
 	

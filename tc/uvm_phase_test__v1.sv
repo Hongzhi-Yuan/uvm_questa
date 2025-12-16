@@ -2,6 +2,17 @@
 `define UVM_PHASE_TEST__V1__SV
 
 
+class super_node;
+	
+endclass 
+
+
+class sub_node extends  super_node ;
+	
+endclass
+
+
+
 class uvm_phase_test__v1 extends uvm_test;
 	
 	`uvm_component_utils(uvm_phase_test__v1)
@@ -120,16 +131,12 @@ class uvm_phase_test__v1 extends uvm_test;
 
 
 	virtual function void uvm_phase_try_1;
-		begin 
-			uvm_phase A = new(.name("A"), .phase_type(UVM_PHASE_SCHEDULE), .parent(null));
-//			A.add(null);
-		end
 		
 		begin 
-			uvm_phase A = new(.name("A"), .phase_type(UVM_PHASE_SCHEDULE), .parent(null));
-			A.add(A);
-
-		end
+			uvm_phase  node_a =  new(.name("node_a"),  .phase_type(UVM_PHASE_SCHEDULE), .parent(null));
+			
+			
+		end 
 		
 		
 		

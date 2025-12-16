@@ -3,15 +3,14 @@ setlocal enabledelayedexpansion
 
 REM ============================================================
 REM  QuestaSim 10.6c UVM Runner (FORCE UVM-1.2)
-REM
-REM  - Compile external UVM-1.2 source into work (override built-in 1.1d)
-REM  - Load Questa built-in uvm_dpi.dll
-REM  - Incremental compile + vopt cache
-REM  - All outputs in ./sim
+REM  - Debug single-step is a SWITCH: add -g or --debug when needed
 REM
 REM  Commands:
-REM    run.bat run   [uvm_test] [seed]  -> comp + console sim (FAST)
-REM    run.bat debug [uvm_test] [seed]  -> comp + GUI sim (waveform)
+REM    run.bat comp  [uvm_test] [seed] [-g]
+REM    run.bat sim   [uvm_test] [seed] [-g]   (console)
+REM    run.bat gui   [uvm_test] [seed] [-g]   (GUI)
+REM    run.bat run   [uvm_test] [seed] [-g]   (comp+sim)
+REM    run.bat debug [uvm_test] [seed]        (comp+gui with -g)
 REM    run.bat clean
 REM ============================================================
 
@@ -38,11 +37,11 @@ set UVM_HOME=%QUESTA_HOME%\verilog_src\uvm-1.2\src
 REM Use Questa built-in UVM DPI dll (base name, no .dll)
 set UVM_DPI_BASE=%QUESTA_HOME%\uvm-1.2\win64\uvm_dpi
 
-REM vlog: incremental + mfcu
-set VLOG_OPTS=-sv -timescale=1ns/1ps -work work -l %SIMDIR%\vlog.log -mfcu -incr
-
 REM vopt cache name
 set OPT_TOP=%TOP%_opt
+
+REM default: debug OFF
+set DBG=0
 REM ------------------------------------------------
 
 REM ---- setup PATH for questa --------------------
@@ -60,8 +59,37 @@ set CMD=%1
 if not "%2"=="" set CASE=%2
 if not "%3"=="" set SEED=%3
 
+REM parse optional flags from %4..%9
+for %%A in (%4 %5 %6 %7 %8 %9) do (
+    if /i "%%~A"=="-g"      set DBG=1
+    if /i "%%~A"=="--debug" set DBG=1
+)
+
+REM default UVM opts
 set UVM_OPTS=+UVM_TESTNAME=%CASE% +ntb_random_seed=%SEED%
 
+REM When debug switch ON: add traces (you can comment out if you dislike noise)
+set UVM_TRACE_OPTS=+UVM_VERBOSITY=UVM_HIGH +UVM_PHASE_TRACE +UVM_OBJECTION_TRACE
+
+REM ---- build options by DBG switch --------------
+set DBG_VLOG=
+set DBG_VOPT=
+set DBG_VSIM=
+
+if "%DBG%"=="1" (
+    echo [MODE] DEBUG/SINGLE-STEP = ON
+    set DBG_VLOG=-debugdb -classdebug
+    set DBG_VOPT=-debugdb +acc
+    set DBG_VSIM=-debugdb
+    set UVM_OPTS=%UVM_OPTS% %UVM_TRACE_OPTS%
+) else (
+    echo [MODE] DEBUG/SINGLE-STEP = OFF
+)
+
+REM vlog: incremental + mfcu (debug flags appended if enabled)
+set VLOG_OPTS=-sv -timescale=1ns/1ps -work work -l %SIMDIR%\vlog.log -mfcu -incr %DBG_VLOG%
+
+REM ------------------------------------------------
 if /i "%CMD%"=="clean" goto CLEAN
 if /i "%CMD%"=="run"   goto RUN_GROUP
 if /i "%CMD%"=="debug" goto DEBUG_GROUP
@@ -122,7 +150,6 @@ if errorlevel 1 (
 )
 
 REM ---- 2) compile your TB/RTL
-REM 关键修改：给 TB 编译也加上 UVM include 路径，确保能找到 uvm_macros.svh
 echo [COMP] vlog (incremental) -f %FILELIST%
 vlog %VLOG_OPTS% +incdir+%UVM_HOME% -f "%FILELIST%"
 if errorlevel 1 (
@@ -131,8 +158,13 @@ if errorlevel 1 (
 )
 
 REM ---- 3) vopt cache after compile
+REM Debug ON: add -debugdb +acc to keep breakpoints/visibility
 echo [COMP] vopt cache -> %OPT_TOP%
-vopt %TOP% -o %OPT_TOP% -work work -l %SIMDIR%\vopt.log
+if "%DBG%"=="1" (
+    vopt %TOP% -o %OPT_TOP% -work work -l %SIMDIR%\vopt.log %DBG_VOPT%
+) else (
+    vopt %TOP% -o %OPT_TOP% -work work -l %SIMDIR%\vopt.log
+)
 if errorlevel 1 (
     echo [ERROR] vopt failed. Check %SIMDIR%\vopt.log
     exit /b 4
@@ -143,12 +175,13 @@ exit /b 0
 
 REM ============================================================
 :SIM
-echo [SIM] running UVM-1.2 test=%CASE% seed=%SEED% (FAST console)...
+echo [SIM] running test=%CASE% seed=%SEED% (console)...
 
 vsim %OPT_TOP% ^
   -lib work ^
   -l %SIMDIR%\vsim.log ^
   -voptargs=+acc ^
+  %DBG_VSIM% ^
   -sv_lib "%UVM_DPI_BASE%" ^
   -sv_seed %SEED% ^
   -onfinish stop ^
@@ -166,12 +199,13 @@ exit /b 0
 
 REM ============================================================
 :GUI
-echo [GUI] running UVM-1.2 test=%CASE% seed=%SEED% (GUI + WLF)...
+echo [GUI] running test=%CASE% seed=%SEED% (GUI)...
 
 vsim %OPT_TOP% ^
   -lib work ^
   -l %SIMDIR%\vsim.log ^
   -voptargs=+acc ^
+  %DBG_VSIM% ^
   -sv_lib "%UVM_DPI_BASE%" ^
   -sv_seed %SEED% ^
   -onfinish stop ^
@@ -182,24 +216,28 @@ exit /b 0
 
 REM ============================================================
 :RUN_GROUP
-call "%~f0" comp
+call "%~f0" comp %CASE% %SEED% %4 %5 %6 %7 %8 %9
 if errorlevel 1 exit /b !errorlevel!
-call "%~f0" sim %CASE% %SEED%
+call "%~f0" sim %CASE% %SEED% %4 %5 %6 %7 %8 %9
 exit /b 0
 
 REM ============================================================
 :DEBUG_GROUP
-call "%~f0" comp
+REM force debug ON for this shortcut
+call "%~f0" comp %CASE% %SEED% -g
 if errorlevel 1 exit /b !errorlevel!
-call "%~f0" gui %CASE% %SEED%
+call "%~f0" gui %CASE% %SEED% -g
 exit /b 0
 
 REM ============================================================
 :HELP
 echo.
 echo Usage:
-echo   run.bat run   [uvm_test] [seed]   ^<-- FORCE UVM-1.2, FAST (no WLF)
-echo   run.bat debug [uvm_test] [seed]   ^<-- FORCE UVM-1.2, GUI + WLF
+echo   run.bat run   [uvm_test] [seed] [-g^|--debug]
+echo   run.bat gui   [uvm_test] [seed] [-g^|--debug]
+echo   run.bat comp  [uvm_test] [seed] [-g^|--debug]
+echo   run.bat sim   [uvm_test] [seed] [-g^|--debug]
+echo   run.bat debug [uvm_test] [seed]        ^<-- comp+gui with debug ON
 echo   run.bat clean
 echo.
 echo External UVM-1.2: %UVM_HOME%
