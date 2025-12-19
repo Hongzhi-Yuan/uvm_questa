@@ -3,14 +3,12 @@ setlocal enabledelayedexpansion
 
 REM ============================================================
 REM  QuestaSim 10.6c UVM Runner (FORCE UVM-1.2)
-REM  - Debug single-step is a SWITCH: add -g or --debug when needed
-REM
 REM  Commands:
-REM    run.bat comp  [uvm_test] [seed] [-g]
-REM    run.bat sim   [uvm_test] [seed] [-g]   (console)
-REM    run.bat gui   [uvm_test] [seed] [-g]   (GUI)
-REM    run.bat run   [uvm_test] [seed] [-g]   (comp+sim)
-REM    run.bat debug [uvm_test] [seed]        (comp+gui with -g)
+REM    run.bat comp  [uvm_test] [seed] [-g|--debug]
+REM    run.bat sim   [uvm_test] [seed] [-g|--debug]   (console)
+REM    run.bat gui   [uvm_test] [seed] [-g|--debug]   (GUI + wave auto)
+REM    run.bat run   [uvm_test] [seed] [-g|--debug]   (comp+sim)
+REM    run.bat debug [uvm_test] [seed]               (comp+gui with -g)
 REM    run.bat clean
 REM ============================================================
 
@@ -68,7 +66,7 @@ for %%A in (%4 %5 %6 %7 %8 %9) do (
 REM default UVM opts
 set UVM_OPTS=+UVM_TESTNAME=%CASE% +ntb_random_seed=%SEED%
 
-REM When debug switch ON: add traces (you can comment out if you dislike noise)
+REM When debug switch ON: add traces
 set UVM_TRACE_OPTS=+UVM_VERBOSITY=UVM_HIGH +UVM_PHASE_TRACE +UVM_OBJECTION_TRACE
 
 REM ---- build options by DBG switch --------------
@@ -78,15 +76,14 @@ set DBG_VSIM=
 
 if "%DBG%"=="1" (
     echo [MODE] DEBUG/SINGLE-STEP = ON
-    set DBG_VLOG=-debugdb -classdebug
-    set DBG_VOPT=-debugdb +acc
-    set DBG_VSIM=-debugdb
+    set DBG_VLOG=-classdebug
+    set DBG_VSIM=
     set UVM_OPTS=%UVM_OPTS% %UVM_TRACE_OPTS%
 ) else (
     echo [MODE] DEBUG/SINGLE-STEP = OFF
 )
 
-REM vlog: incremental + mfcu (debug flags appended if enabled)
+REM vlog options
 set VLOG_OPTS=-sv -timescale=1ns/1ps -work work -l %SIMDIR%\vlog.log -mfcu -incr %DBG_VLOG%
 
 REM ------------------------------------------------
@@ -108,7 +105,7 @@ if exist "%SIMDIR%" (
     del /f /q "%SIMDIR%\transcript" >nul 2>nul
     del /f /q "%SIMDIR%\*.ucdb" >nul 2>nul
     del /f /q "modelsim.ini" >nul 2>nul
-    del /f /q "sim_top_opt" >nul 2>nul
+    del /f /q "%OPT_TOP%" >nul 2>nul
 )
 echo [CLEAN] done.
 exit /b 0
@@ -158,12 +155,13 @@ if errorlevel 1 (
 )
 
 REM ---- 3) vopt cache after compile
-REM Debug ON: add -debugdb +acc to keep breakpoints/visibility
-echo [COMP] vopt cache -> %OPT_TOP%
+REM IMPORTANT: Always keep visibility for waveform/debug: +acc
+REM If you prefer: replace +acc with -access +rwc
+echo [COMP] vopt cache -> %OPT_TOP% (with +acc)
 if "%DBG%"=="1" (
-    vopt %TOP% -o %OPT_TOP% -work work -l %SIMDIR%\vopt.log %DBG_VOPT%
+    vopt %TOP% -o %OPT_TOP% -work work -l %SIMDIR%\vopt.log +acc
 ) else (
-    vopt %TOP% -o %OPT_TOP% -work work -l %SIMDIR%\vopt.log
+    vopt %TOP% -o %OPT_TOP% -work work -l %SIMDIR%\vopt.log +acc
 )
 if errorlevel 1 (
     echo [ERROR] vopt failed. Check %SIMDIR%\vopt.log
@@ -180,14 +178,13 @@ echo [SIM] running test=%CASE% seed=%SEED% (console)...
 vsim %OPT_TOP% ^
   -lib work ^
   -l %SIMDIR%\vsim.log ^
-  -voptargs=+acc ^
   %DBG_VSIM% ^
   -sv_lib "%UVM_DPI_BASE%" ^
   -sv_seed %SEED% ^
   -onfinish stop ^
   -c ^
   %UVM_OPTS% ^
-  -do "run -all; quit -f"
+  -do "log -r /*; run -all; quit -f"
 
 if errorlevel 1 (
     echo [ERROR] sim failed. Check %SIMDIR%\vsim.log
@@ -204,13 +201,13 @@ echo [GUI] running test=%CASE% seed=%SEED% (GUI)...
 vsim %OPT_TOP% ^
   -lib work ^
   -l %SIMDIR%\vsim.log ^
-  -voptargs=+acc ^
   %DBG_VSIM% ^
   -sv_lib "%UVM_DPI_BASE%" ^
   -sv_seed %SEED% ^
   -onfinish stop ^
   -wlf %SIMDIR%\vsim.wlf ^
-  %UVM_OPTS%
+  %UVM_OPTS% ^
+  -do "log -r /*; add wave -r /*; run -all"
 
 exit /b 0
 
@@ -223,7 +220,6 @@ exit /b 0
 
 REM ============================================================
 :DEBUG_GROUP
-REM force debug ON for this shortcut
 call "%~f0" comp %CASE% %SEED% -g
 if errorlevel 1 exit /b !errorlevel!
 call "%~f0" gui %CASE% %SEED% -g
